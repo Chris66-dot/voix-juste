@@ -293,6 +293,13 @@
         <option value="intermediaire">Intermédiaire (B1–B2)</option>
         <option value="avance">Avancé (C1–C2)</option>
       </select>
+      <select id="speedSelect" aria-label="Vitesse de lecture audio" title="Vitesse de lecture">
+        <option value="0.5">🔊 0.5x</option>
+        <option value="0.75">🔊 0.75x</option>
+        <option value="0.95" selected>🔊 1x</option>
+        <option value="1.5">🔊 1.5x</option>
+        <option value="2">🔊 2x</option>
+      </select>
       <button class="icon-btn mobile-notebook-btn" id="openNotebook">📓 Carnet</button>
     </div>
   </header>
@@ -306,6 +313,7 @@
     <button class="chip" data-topic="commander au restaurant">Restaurant</button>
   </div>
 
+  
   <main class="chat" id="chat"></main>
 
   <div class="input-bar">
@@ -358,6 +366,7 @@
   const sendBtn = document.getElementById('sendBtn');
   const micBtn = document.getElementById('micBtn');
   const levelSelect = document.getElementById('levelSelect');
+  const speedSelect = document.getElementById('speedSelect');
   const topicsRow = document.getElementById('topicsRow');
   const vocabList = document.getElementById('vocabList');
   const statMsgs = document.getElementById('statMsgs');
@@ -472,11 +481,12 @@
     [...topicsRow.children].forEach(c=>c.style.background='');
     chip.style.background = 'var(--gold-bg)';
     if(apiHistory.length===0){
+      const starter = starterLine(currentTopic);
       addAiMessage({
-        reply: starterLine(currentTopic),
+        reply: starter,
         hasCorrection:false, newVocabulary:[]
       });
-      apiHistory.push({role:'assistant', content: JSON.stringify({reply: starterLine(currentTopic), hasCorrection:false, newVocabulary:[]})});
+      apiHistory.push({role:'assistant', content: JSON.stringify({reply: starter, hasCorrection:false, newVocabulary:[]})});
     }
   });
 
@@ -690,7 +700,7 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
     const enVoice = voices.find(v=>v.lang==='en-US') || voices.find(v=>v.lang && v.lang.startsWith('en'));
     if(enVoice) utter.voice = enVoice;
     utter.lang = 'en-US';
-    utter.rate = 0.95;
+    utter.rate = parseFloat(speedSelect.value) || 0.95;
     window.speechSynthesis.speak(utter);
   }
 
