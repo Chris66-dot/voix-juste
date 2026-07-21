@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voix Juste — Apprentissage de l'anglais</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B2A4A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Voix Juste">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2A4A;
+    --ink-soft:#4A5A78;
+    --paper:#EBEEF4;
+    --card:#FFFFFF;
+    --rule:#D7DDE8;
+    --correct-red:#C6472F;
+    --correct-red-bg:#FBEBE7;
+    --success:#2F7A69;
+    --success-bg:#E6F2EE;
+    --gold:#C4922E;
+    --gold-bg:#FBF1DF;
+    --font-display:'Fraunces', serif;
+    --font-body:'Public Sans', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:var(--font-body);
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    display:grid;
+    grid-template-columns: 1fr 300px;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "header header"
+      "chat sidebar"
+      "input sidebar";
+    height:100vh;
+    max-width:1180px;
+    margin:0 auto;
+  }
+  @media (max-width:820px){
+    .app{grid-template-columns:1fr; grid-template-areas:"header" "chat" "input"; height:auto; min-height:100vh;}
+    .sidebar{display:none;}
+    .sidebar.open{display:flex; grid-area:chat; position:fixed; inset:0; z-index:50; background:var(--paper); max-width:100%; height:100vh; padding-top:64px;}
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    grid-area:header;
+    padding:18px 28px 14px;
+    border-bottom:1px solid var(--rule);
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    background:var(--paper);
+  }
+  .brand{display:flex; align-items:baseline; gap:10px;}
+  .brand h1{
+    font-family:var(--font-display);
+    font-optical-sizing:auto;
+    font-weight:700;
+    font-size:26px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .brand h1 .juste{color:var(--correct-red); font-style:italic; font-weight:600;}
+  .brand .tag{font-size:12.5px; color:var(--ink-soft); font-family:var(--font-mono);}
+  .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  select, .icon-btn{
+    font-family:var(--font-body);
+    font-size:13px;
+    border:1px solid var(--rule);
+    background:var(--card);
+    color:var(--ink);
+    padding:7px 10px;
+    border-radius:7px;
+    cursor:pointer;
+  }
+  .icon-btn{padding:7px 12px; font-weight:600;}
+  .icon-btn:hover{border-color:var(--ink-soft);}
+  .mobile-notebook-btn{display:none;}
+  @media (max-width:820px){ .mobile-notebook-btn{display:inline-block;} }
+
+  /* ---------- Streak badge ---------- */
+  .streak-badge{
+    display:flex; align-items:center; gap:5px;
+    font-family:var(--font-mono); font-size:13px; font-weight:600;
+    background:var(--gold-bg); color:var(--gold);
+    border:1px solid var(--gold); border-radius:999px;
+    padding:6px 11px;
+  }
+  .streak-badge .flame{font-size:14px;}
+  .streak-badge.zero{background:var(--card); color:var(--ink-soft); border-color:var(--rule);}
+
+  /* ---------- Daily goal (sidebar) ---------- */
+  .goal-box{display:flex; flex-direction:column; gap:8px; border-bottom:1px dashed var(--rule); padding-bottom:14px;}
+  .goal-head{display:flex; justify-content:space-between; align-items:center;}
+  .goal-head h2{font-size:15px; margin:0;}
+  .goal-select{
+    font-family:var(--font-mono); font-size:11px; border:1px solid var(--rule);
+    background:var(--card); color:var(--ink-soft); border-radius:6px; padding:3px 6px; cursor:pointer;
+    width:58px; text-align:right;
+  }
+  .goal-progress-track{
+    width:100%; height:8px; border-radius:999px; background:var(--rule); overflow:hidden;
+  }
+  .goal-progress-fill{
+    height:100%; background:var(--success); border-radius:999px;
+    transition:width .35s ease; width:0%;
+  }
+  .goal-progress-fill.done{background:var(--gold);}
+  .goal-caption{font-family:var(--font-mono); font-size:11.5px; color:var(--ink-soft);}
+
+  /* ---------- Celebration toast ---------- */
+  .celebrate-toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; font-family:var(--font-body); font-size:14px; font-weight:600;
+    padding:12px 20px; border-radius:999px; box-shadow:0 8px 24px rgba(27,42,74,.28);
+    opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease; z-index:80;
+    display:flex; align-items:center; gap:8px;
+  }
+  .celebrate-toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ---------- Topic chips ---------- */
+  .topics{
+    grid-area:header;
+    margin-top:64px;
+  }
+  .topics-row{
+    display:flex; gap:8px; padding:0 28px 14px; overflow-x:auto;
+    border-bottom:1px solid var(--rule);
+    background:var(--paper);
+  }
+  .chip{
+    flex:none;
+    font-family:var(--font-mono);
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid var(--rule);
+    background:var(--card);
+    color:var(--ink-soft);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--gold); color:var(--ink);}
+
+  /* ---------- Chat ---------- */
+  .chat{
+    grid-area:chat;
+    overflow-y:auto;
+    padding:22px 28px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    background-image: repeating-linear-gradient(var(--paper) 0 37px, var(--rule) 37px 38px);
+    background-position: 0 90px;
+  }
+  .row{display:flex; flex-direction:column; max-width:78%;}
+  .row.user{align-self:flex-end; align-items:flex-end;}
+  .row.ai{align-self:flex-start; align-items:flex-start;}
+  .bubble{
+    padding:11px 15px;
+    border-radius:12px;
+    font-size:15px;
+    line-height:1.5;
+  }
+  .row.user .bubble{background:var(--ink); color:#fff; border-bottom-right-radius:3px;}
+  .row.ai .bubble{background:var(--card); border:1px solid var(--rule); border-bottom-left-radius:3px;}
+  .speak-btn{
+    margin-top:5px; font-size:11.5px; font-family:var(--font-mono);
+    color:var(--ink-soft); background:none; border:none; cursor:pointer; padding:0;
+  }
+  .speak-btn:hover{color:var(--gold);}
+
+  /* correction annotation, signature element */
+  .correction-card{
+    max-width:78%;
+    align-self:flex-start;
+    background:var(--correct-red-bg);
+    border-left:3px solid var(--correct-red);
+    border-radius:2px 8px 8px 2px;
+    padding:10px 14px;
+    font-size:13.5px;
+  }
+  .correction-card .label{
+    font-family:var(--font-mono); font-size:10.5px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--correct-red); margin-bottom:5px; font-weight:600;
+  }
+  .correction-card .orig{
+    text-decoration:line-through; text-decoration-color:var(--correct-red);
+    color:var(--ink-soft); margin-right:8px;
+  }
+  .correction-card .fixed{color:var(--success); font-weight:600;}
+  .correction-card .expl{margin-top:6px; color:var(--ink-soft); font-style:italic;}
+
+  .no-error-tag{
+    font-family:var(--font-mono); font-size:11px; color:var(--success);
+    background:var(--success-bg); padding:3px 9px; border-radius:999px; align-self:flex-start;
+  }
+
+  .vocab-tag{
+    font-family:var(--font-mono); font-size:11.5px; color:var(--gold);
+    background:var(--gold-bg); padding:3px 9px; border-radius:6px; margin-top:6px; align-self:flex-start;
+  }
+
+  .typing{font-family:var(--font-mono); font-size:12.5px; color:var(--ink-soft); padding:0 4px;}
+
+  /* ---------- Input ---------- */
+  .input-bar{
+    grid-area:input;
+    display:flex; gap:8px; align-items:flex-end;
+    padding:14px 28px 20px;
+    border-top:1px solid var(--rule);
+    background:var(--paper);
+  }
+  textarea{
+    flex:1; resize:none; font-family:var(--font-body); font-size:15px;
+    padding:11px 14px; border-radius:10px; border:1px solid var(--rule);
+    background:var(--card); color:var(--ink); max-height:120px;
+  }
+  textarea:focus, select:focus, .icon-btn:focus, .chip:focus, .mic-btn:focus{
+    outline:2px solid var(--gold); outline-offset:1px;
+  }
+  .mic-btn, .send-btn{
+    flex:none; width:44px; height:44px; border-radius:50%;
+    border:1px solid var(--rule); background:var(--card); cursor:pointer;
+    font-size:18px; display:flex; align-items:center; justify-content:center;
+  }
+  .mic-btn.listening{background:var(--correct-red); border-color:var(--correct-red); animation:pulse 1.2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(198,71,47,.45);}70%{box-shadow:0 0 0 10px rgba(198,71,47,0);}100%{box-shadow:0 0 0 0 rgba(198,71,47,0);}}
+  .send-btn{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .send-btn:disabled{opacity:.4; cursor:default;}
+
+  /* ---------- Sidebar / carnet ---------- */
+  .sidebar{
+    grid-area:sidebar;
+    border-left:1px solid var(--rule);
+    padding:20px 20px 20px;
+    display:flex; flex-direction:column; gap:18px;
+    overflow-y:auto;
+  }
+  .sidebar h2{
+    font-family:var(--font-display); font-size:18px; margin:0; font-weight:600;
+  }
+  .close-notebook{display:none; align-self:flex-end; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-soft);}
+  @media (max-width:820px){ .close-notebook{display:block;} }
+  .stat-row{display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:12.5px; color:var(--ink-soft); border-bottom:1px dashed var(--rule); padding-bottom:8px;}
+  .stat-row b{color:var(--ink); font-size:15px; font-family:var(--font-body);}
+  .vocab-list{display:flex; flex-direction:column; gap:8px; font-size:13px;}
+  .vocab-item{background:var(--card); border:1px solid var(--rule); border-radius:8px; padding:8px 10px;}
+  .vocab-item .w{font-weight:600;}
+  .vocab-item .t{color:var(--ink-soft); font-size:12px;}
+  .empty-note{font-size:12.5px; color:var(--ink-soft); font-style:italic;}
+  .reset-btn{
+    margin-top:auto; font-family:var(--font-mono); font-size:12px; color:var(--ink-soft);
+    background:none; border:1px solid var(--rule); border-radius:7px; padding:8px; cursor:pointer;
+  }
+  .reset-btn:hover{border-color:var(--correct-red); color:var(--correct-red);}
+
+  .unsupported-note{
+    font-family:var(--font-mono); font-size:11px; color:var(--gold); padding:6px 28px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <header>
+    <div class="brand">
+      <h1>Voix<span class="juste"> Juste</span></h1>
+      <span class="tag">// tuteur d'anglais — écrit &amp; oral</span>
+    </div>
+    <div class="controls">
+      <span class="streak-badge zero" id="streakBadge"><span class="flame">🔥</span><span id="streakCount">0</span></span>
+      <select id="levelSelect" aria-label="Niveau">
+        <option value="adaptatif" selected>Adaptatif (mixte)</option>
+        <option value="debutant">Débutant (A1–A2)</option>
+        <option value="intermediaire">Intermédiaire (B1–B2)</option>
+        <option value="avance">Avancé (C1–C2)</option>
+      </select>
+      <button class="icon-btn mobile-notebook-btn" id="openNotebook">📓 Carnet</button>
+    </div>
+  </header>
+
+  <div class="topics-row" id="topicsRow">
+    <button class="chip" data-topic="la vie quotidienne">Vie quotidienne</button>
+    <button class="chip" data-topic="un voyage à l'étranger">Voyage</button>
+    <button class="chip" data-topic="le travail et l'entretien d'embauche">Travail</button>
+    <button class="chip" data-topic="les loisirs et les passions">Loisirs</button>
+    <button class="chip" data-topic="l'actualité et les sujets de société">Actualité</button>
+    <button class="chip" data-topic="commander au restaurant">Restaurant</button>
+  </div>
+
+  <main class="chat" id="chat"></main>
+
+  <div class="input-bar">
+    <button class="mic-btn" id="micBtn" title="Parler" aria-label="Enregistrer un message vocal">🎙️</button>
+    <textarea id="textInput" rows="1" placeholder="Écris ou dis quelque chose en anglais…"></textarea>
+    <button class="send-btn" id="sendBtn" title="Envoyer" aria-label="Envoyer">➤</button>
+  </div>
+
+  <aside class="sidebar" id="sidebar">
+    <button class="close-notebook" id="closeNotebook" aria-label="Fermer">✕</button>
+    <h2>Carnet de progrès</h2>
+
+    <div class="goal-box">
+      <div class="goal-head">
+        <h2>Objectif du jour</h2>
+        <input type="number" class="goal-select" id="goalSelect" aria-label="Objectif quotidien" min="1" step="1" value="5">
+
+      </div>
+      <div class="goal-progress-track"><div class="goal-progress-fill" id="goalFill"></div></div>
+      <div class="goal-caption" id="goalCaption">0 / 5 aujourd'hui</div>
+    </div>
+
+    <div class="stat-row"><span>Messages échangés</span><b id="statMsgs">0</b></div>
+    <div class="stat-row"><span>Corrections faites</span><b id="statCorrections">0</b></div>
+    <div class="stat-row"><span>Phrases correctes</span><b id="statCorrect">0</b></div>
+    <div>
+      <h2 style="font-size:15px; margin-bottom:8px;">Nouveau vocabulaire</h2>
+      <div class="vocab-list" id="vocabList">
+        <div class="empty-note">Le vocabulaire rencontré pendant la conversation apparaîtra ici.</div>
+      </div>
+    </div>
+    <button class="reset-btn" id="resetBtn">↺ Nouvelle conversation</button>
+  </aside>
+</div>
+
+<div class="unsupported-note" id="speechNote" style="display:none;"></div>
+<div class="celebrate-toast" id="celebrateToast">🎉 <span id="celebrateText">Objectif du jour atteint !</span></div>
+
+<script>
+(function(){
+  // ⚠️ À MODIFIER après avoir déployé votre backend (voir README.md) :
+  // remplacez cette URL par celle de votre fonction/serveur qui protège votre clé API.
+  // Exemples :
+  //   Cloudflare Pages :  "https://voix-juste.pages.dev/api/chat"
+  //   Node/Express      :  "https://votre-app.onrender.com/api/chat"
+  const API_ENDPOINT = "https://divine-salad-32d2.christpardonneakpovo.workers.dev/api/chat";
+
+  const chatEl = document.getElementById('chat');
+  const textInput = document.getElementById('textInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const micBtn = document.getElementById('micBtn');
+  const levelSelect = document.getElementById('levelSelect');
+  const topicsRow = document.getElementById('topicsRow');
+  const vocabList = document.getElementById('vocabList');
+  const statMsgs = document.getElementById('statMsgs');
+  const statCorrections = document.getElementById('statCorrections');
+  const statCorrect = document.getElementById('statCorrect');
+  const resetBtn = document.getElementById('resetBtn');
+  const sidebar = document.getElementById('sidebar');
+  const openNotebook = document.getElementById('openNotebook');
+  const closeNotebook = document.getElementById('closeNotebook');
+  const speechNote = document.getElementById('speechNote');
+  const streakBadge = document.getElementById('streakBadge');
+  const streakCount = document.getElementById('streakCount');
+  const goalSelect = document.getElementById('goalSelect');
+  const goalFill = document.getElementById('goalFill');
+  const goalCaption = document.getElementById('goalCaption');
+  const celebrateToast = document.getElementById('celebrateToast');
+  const celebrateText = document.getElementById('celebrateText');
+
+  let apiHistory = []; // {role, content} sent to API, assistant content = raw JSON text
+  let stats = {msgs:0, corrections:0, correct:0, vocab:[]};
+  let currentTopic = "la vie quotidienne";
+
+  /* ---------- Streak & daily goal (persisted in localStorage) ---------- */
+  const PROGRESS_KEY = 'voixJusteProgress';
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+  function yesterdayStr(){
+    const d = new Date(); d.setDate(d.getDate()-1);
+    return d.toISOString().slice(0,10);
+  }
+  function loadProgress(){
+    let p;
+    try{ p = JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {}; }
+    catch(e){ p = {}; }
+    return {
+      streak: p.streak || 0,
+      lastActiveDate: p.lastActiveDate || null,
+      todayCount: p.todayCount || 0,
+      goalTarget: p.goalTarget || 5,
+      goalReachedDate: p.goalReachedDate || null,
+    };
+  }
+  function saveProgress(p){
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
+  }
+  let progress = loadProgress();
+
+  function renderStreak(){
+    streakCount.textContent = progress.streak;
+    streakBadge.classList.toggle('zero', progress.streak === 0);
+  }
+  function renderGoal(){
+    goalSelect.value = String(progress.goalTarget);
+    const pct = Math.min(100, Math.round((progress.todayCount / progress.goalTarget) * 100));
+    goalFill.style.width = pct + '%';
+    const done = progress.todayCount >= progress.goalTarget;
+    goalFill.classList.toggle('done', done);
+    goalCaption.textContent = `${progress.todayCount} / ${progress.goalTarget} aujourd'hui${done ? ' — objectif atteint ✅' : ''}`;
+  }
+  function showCelebration(msg){
+    celebrateText.textContent = msg;
+    celebrateToast.classList.add('show');
+    setTimeout(()=> celebrateToast.classList.remove('show'), 3200);
+  }
+  // If the day rolled over since last visit (without any message yet), reset today's count
+  // but keep the streak intact until the user misses a full day.
+  if(progress.lastActiveDate && progress.lastActiveDate !== todayStr()){
+    if(progress.lastActiveDate !== yesterdayStr()){
+      progress.streak = 0; // missed a day (or more) -> streak broken
+    }
+    progress.todayCount = 0;
+  }
+  saveProgress(progress);
+
+  function registerActivityForStreak(){
+    const today = todayStr();
+    if(progress.lastActiveDate !== today){
+      progress.streak = (progress.lastActiveDate === yesterdayStr()) ? progress.streak + 1 : 1;
+      progress.lastActiveDate = today;
+      progress.todayCount = 0;
+      progress.goalReachedDate = progress.goalReachedDate === today ? today : null;
+    }
+    progress.todayCount += 1;
+    const justReached = progress.todayCount >= progress.goalTarget && progress.goalReachedDate !== today;
+    if(justReached) progress.goalReachedDate = today;
+    saveProgress(progress);
+    renderStreak();
+    renderGoal();
+    if(justReached){
+      showCelebration(`Objectif du jour atteint — ${progress.streak} jour${progress.streak>1?'s':''} d'affilée 🔥`);
+    }
+  }
+
+  goalSelect.addEventListener('change', ()=>{
+    let val = parseInt(goalSelect.value, 10);
+    if(!Number.isFinite(val) || val < 1) val = 1;
+    progress.goalTarget = val;
+    goalSelect.value = String(val);
+    saveProgress(progress);
+    renderGoal();
+  });
+
+  renderStreak();
+  renderGoal();
+
+  openNotebook.addEventListener('click', ()=> sidebar.classList.add('open'));
+  closeNotebook.addEventListener('click', ()=> sidebar.classList.remove('open'));
+
+  topicsRow.addEventListener('click', (e)=>{
+    const chip = e.target.closest('.chip');
+    if(!chip) return;
+    currentTopic = chip.dataset.topic;
+    [...topicsRow.children].forEach(c=>c.style.background='');
+    chip.style.background = 'var(--gold-bg)';
+    if(apiHistory.length===0){
+      addAiMessage({
+        reply: starterLine(currentTopic),
+        hasCorrection:false, newVocabulary:[]
+      });
+      apiHistory.push({role:'assistant', content: JSON.stringify({reply: starterLine(currentTopic), hasCorrection:false, newVocabulary:[]})});
+    }
+  });
+
+  function starterLine(topic){
+    const starters = {
+      "la vie quotidienne":"Hi! Let's talk about your daily routine. What time do you usually wake up?",
+      "un voyage à l'étranger":"Hello! Tell me about a trip you'd love to take. Where would you go?",
+      "le travail et l'entretien d'embauche":"Hi there! Let's practice for a job interview. Can you tell me about your current job?",
+      "les loisirs et les passions":"Hey! What do you like to do in your free time?",
+      "l'actualité et les sujets de société":"Hi! What's a news story that caught your attention recently?",
+      "commander au restaurant":"Welcome! Imagine we're at a restaurant. What would you like to order?"
+    };
+    return starters[topic] || "Hi! What would you like to talk about today?";
+  }
+
+  function systemPrompt(){
+    const levelMap = {
+      adaptatif:"Le niveau des apprenants est mixte : adapte-toi automatiquement au niveau que révèle chaque message (vocabulaire, complexité des phrases), sans jamais infantiliser ni décourager.",
+      debutant:"Les apprenants sont débutants (A1-A2) : utilise des phrases courtes et simples, du vocabulaire courant, et corrige en priorité les erreurs de base.",
+      intermediaire:"Les apprenants sont de niveau intermédiaire (B1-B2) : utilise des phrases plus riches, introduis du vocabulaire varié, corrige la grammaire fine et les tournures peu naturelles.",
+      avance:"Les apprenants sont avancés (C1-C2) : utilise un anglais nuancé et idiomatique, corrige les subtilités de style, de registre et de nuance."
+    };
+    return `Tu es un tuteur d'anglais bienveillant et rigoureux pour des apprenants francophones. Le sujet de conversation actuel est : "${currentTopic}". ${levelMap[levelSelect.value]}
+Ton rôle : (1) tenir une conversation naturelle en anglais pour faire pratiquer l'apprenant, (2) repérer une éventuelle erreur dans SON DERNIER message (grammaire, vocabulaire, structure, registre), (3) si une erreur existe, proposer la correction ET une brève explication en français, (4) si le message est déjà correct, ne pas inventer d'erreur.
+Fais un mix équilibré entre fluidité de la conversation, correction grammaticale et enrichissement du vocabulaire — sans corriger plus d'UNE erreur principale par message pour ne pas décourager.
+Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte avant/après, sans balises markdown, au format exact :
+{"reply": "ta réponse conversationnelle en anglais, naturelle et encourageante, qui relance la discussion", "hasCorrection": true|false, "originalFragment": "le passage incorrect exact tiré du message de l'apprenant (vide si hasCorrection=false)", "correctedFragment": "la version corrigée (vide si hasCorrection=false)", "explanationFr": "explication brève en français, 1 à 2 phrases max (vide si hasCorrection=false)", "newVocabulary": [{"word":"mot ou expression anglaise introduite dans ta réponse", "translationFr":"traduction française courte"}]}
+Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux et utiles.`;
+  }
+
+  function addUserMessage(text){
+    const row = document.createElement('div');
+    row.className = 'row user';
+    row.innerHTML = `<div class="bubble"></div>`;
+    row.querySelector('.bubble').textContent = text;
+    chatEl.appendChild(row);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  function addAiMessage(data){
+    if(data.hasCorrection && data.originalFragment){
+      const card = document.createElement('div');
+      card.className = 'correction-card';
+      card.innerHTML = `<div class="label">Correction</div>
+        <span class="orig"></span><span class="fixed"></span>
+        <div class="expl"></div>`;
+      card.querySelector('.orig').textContent = data.originalFragment;
+      card.querySelector('.fixed').textContent = '→ ' + data.correctedFragment;
+      card.querySelector('.expl').textContent = data.explanationFr || '';
+      chatEl.appendChild(card);
+      stats.corrections++;
+    } else if(apiHistory.length>0){
+      const tag = document.createElement('div');
+      tag.className = 'no-error-tag';
+      tag.textContent = '✓ correct';
+      chatEl.appendChild(tag);
+      stats.correct++;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'row ai';
+    row.innerHTML = `<div class="bubble"></div><button class="speak-btn">🔊 écouter</button>`;
+    row.querySelector('.bubble').textContent = data.reply;
+    row.querySelector('.speak-btn').addEventListener('click', ()=> speak(data.reply));
+    chatEl.appendChild(row);
+
+    if(data.newVocabulary && data.newVocabulary.length){
+      data.newVocabulary.forEach(v=>{
+        if(!v.word) return;
+        stats.vocab.push(v);
+        const tag = document.createElement('div');
+        tag.className = 'vocab-tag';
+        tag.textContent = `+ ${v.word} — ${v.translationFr||''}`;
+        chatEl.appendChild(tag);
+      });
+    }
+    chatEl.scrollTop = chatEl.scrollHeight;
+    renderSidebar();
+  }
+
+  function renderSidebar(){
+    statMsgs.textContent = stats.msgs;
+    statCorrections.textContent = stats.corrections;
+    statCorrect.textContent = stats.correct;
+    if(stats.vocab.length===0){
+      vocabList.innerHTML = '<div class="empty-note">Le vocabulaire rencontré pendant la conversation apparaîtra ici.</div>';
+    } else {
+      vocabList.innerHTML = '';
+      stats.vocab.slice().reverse().forEach(v=>{
+        const item = document.createElement('div');
+        item.className = 'vocab-item';
+        item.innerHTML = `<div class="w"></div><div class="t"></div>`;
+        item.querySelector('.w').textContent = v.word;
+        item.querySelector('.t').textContent = v.translationFr || '';
+        vocabList.appendChild(item);
+      });
+    }
+  }
+
+  function showTyping(){
+    const el = document.createElement('div');
+    el.className = 'typing';
+    el.id = 'typingIndicator';
+    el.textContent = "l'IA écrit…";
+    chatEl.appendChild(el);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+  function hideTyping(){
+    const el = document.getElementById('typingIndicator');
+    if(el) el.remove();
+  }
+
+  async function sendMessage(text){
+    if(!text || !text.trim()) return;
+    addUserMessage(text);
+    stats.msgs++;
+    registerActivityForStreak();
+    textInput.value = '';
+    sendBtn.disabled = true;
+    showTyping();
+
+    apiHistory.push({role:'user', content:text});
+
+    try{
+      const response = await fetch(API_ENDPOINT, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          system: systemPrompt(),
+          messages: apiHistory
+        })
+      });
+      const data = await response.json();
+
+      if(!response.ok){
+        throw new Error(data && data.error ? data.error : `Erreur serveur (${response.status})`);
+      }
+
+      const raw = (data.content||[]).map(b=>b.text||'').join('');
+      const clean = raw.replace(/```json|```/g,'').trim();
+      let parsed;
+      try{ parsed = JSON.parse(clean); }
+      catch(e){ parsed = {reply: raw || "Sorry, I couldn't process that — can you try again?", hasCorrection:false, newVocabulary:[]}; }
+
+      apiHistory.push({role:'assistant', content: clean});
+      hideTyping();
+      addAiMessage(parsed);
+    }catch(err){
+      hideTyping();
+      const row = document.createElement('div');
+      row.className = 'row ai';
+      row.innerHTML = `<div class="bubble">Une erreur de connexion est survenue. Réessaie dans un instant.</div>`;
+      chatEl.appendChild(row);
+      console.error('Voix Juste API error:', err);
+    }finally{
+      sendBtn.disabled = false;
+    }
+  }
+
+  sendBtn.addEventListener('click', ()=> sendMessage(textInput.value));
+  textInput.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(textInput.value); }
+  });
+  textInput.addEventListener('input', ()=>{
+    textInput.style.height='auto';
+    textInput.style.height = Math.min(textInput.scrollHeight,120)+'px';
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    apiHistory = [];
+    stats = {msgs:0, corrections:0, correct:0, vocab:[]};
+    chatEl.innerHTML = '';
+    renderSidebar();
+    sidebar.classList.remove('open');
+  });
+
+  /* ---------- Speech recognition ---------- */
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognizing = false;
+  if(SpeechRecognition){
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    micBtn.addEventListener('click', ()=>{
+      if(recognizing){ recognition.stop(); return; }
+      recognition.start();
+    });
+    recognition.onstart = ()=>{ recognizing = true; micBtn.classList.add('listening'); };
+    recognition.onend = ()=>{ recognizing = false; micBtn.classList.remove('listening'); };
+    recognition.onerror = ()=>{ recognizing = false; micBtn.classList.remove('listening'); };
+    recognition.onresult = (event)=>{
+      const transcript = event.results[0][0].transcript;
+      textInput.value = transcript;
+      sendMessage(transcript);
+    };
+  } else {
+    micBtn.disabled = true;
+    micBtn.title = "Reconnaissance vocale non disponible sur ce navigateur";
+    speechNote.style.display = 'block';
+    speechNote.textContent = "ℹ️ La reconnaissance vocale n'est pas prise en charge par ce navigateur — utilise Chrome ou Edge pour parler à l'IA. La lecture audio des réponses reste disponible.";
+  }
+
+  /* ---------- Speech synthesis ---------- */
+  function speak(text){
+    if(!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const enVoice = voices.find(v=>v.lang==='en-US') || voices.find(v=>v.lang && v.lang.startsWith('en'));
+    if(enVoice) utter.voice = enVoice;
+    utter.lang = 'en-US';
+    utter.rate = 0.95;
+    window.speechSynthesis.speak(utter);
+  }
+
+  /* ---------- init ---------- */
+  [...topicsRow.children][0].click();
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+})();
+</script>
+</body>
+</html>
