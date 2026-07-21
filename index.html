@@ -437,11 +437,11 @@
     <div class="pay-option">
       <b>💳 Payer en ligne (Mobile Money / Carte)</b>
       <p>Paiement sécurisé via KKiaPay.</p>
-      <button class="primary-btn" id="kkiapayBtn" style="margin-top:10px;">Payer 2000 FCFA</button>
+      <button class="primary-btn" id="kkiapayBtn" style="margin-top:10px;">Payer 10 $ (≈ 5750 FCFA)</button>
     </div>
     <div class="pay-option">
       <b>📱 Paiement manuel</b>
-      <p>Envoie 2000 FCFA par Mobile Money au <strong>+229 XX XX XX XX</strong> puis envoie ton reçu par WhatsApp. Ton compte sera activé en Pro sous peu.</p>
+      <p>Envoie 10 $ (≈ 5750 FCFA) par Mobile Money au <strong>+229 XX XX XX XX</strong> puis envoie ton reçu par WhatsApp. Ton compte sera activé en Pro sous peu.</p>
     </div>
     <button class="link-btn" id="closeUpgradeBtn">Plus tard</button>
   </div>
@@ -923,7 +923,7 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
   kkiapayBtn.addEventListener('click', ()=>{
     if(typeof openKkiapayWidget !== 'function'){ alert("Le module de paiement ne s'est pas chargé, réessaie."); return; }
     openKkiapayWidget({
-      amount: 2000,
+      amount: 5750,
       key: KKIAPAY_PUBLIC_KEY,
       sandbox: KKIAPAY_SANDBOX,
       position: 'center',
