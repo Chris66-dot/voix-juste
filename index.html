@@ -142,10 +142,16 @@
     margin-top:64px;
   }
   .topics-row{
-    display:flex; gap:8px; padding:0 28px 14px; overflow-x:auto;
+    display:flex; gap:10px; align-items:center; padding:12px 28px 14px; overflow-x:auto;
     border-bottom:1px solid var(--rule);
     background:var(--paper);
     grid-area:topics;
+  }
+  .topic-label{font-family:var(--font-mono); font-size:12.5px; color:var(--ink-soft); white-space:nowrap;}
+  #topicSelect{
+    font-family:var(--font-body); font-size:13px; border:1px solid var(--rule);
+    background:var(--card); color:var(--ink); padding:7px 10px; border-radius:7px; cursor:pointer;
+    max-width:100%;
   }
   .chip{
     flex:none;
@@ -307,12 +313,31 @@
   </header>
 
   <div class="topics-row" id="topicsRow">
-    <button class="chip" data-topic="la vie quotidienne">Vie quotidienne</button>
-    <button class="chip" data-topic="un voyage à l'étranger">Voyage</button>
-    <button class="chip" data-topic="le travail et l'entretien d'embauche">Travail</button>
-    <button class="chip" data-topic="les loisirs et les passions">Loisirs</button>
-    <button class="chip" data-topic="l'actualité et les sujets de société">Actualité</button>
-    <button class="chip" data-topic="commander au restaurant">Restaurant</button>
+    <label for="topicSelect" class="topic-label">💬 Sujet :</label>
+    <select id="topicSelect" aria-label="Sujet de conversation">
+      <option value="la vie quotidienne">Vie quotidienne</option>
+      <option value="un voyage à l'étranger">Voyage</option>
+      <option value="le travail et l'entretien d'embauche">Travail</option>
+      <option value="les loisirs et les passions">Loisirs</option>
+      <option value="l'actualité et les sujets de société">Actualité</option>
+      <option value="commander au restaurant">Restaurant</option>
+      <option value="la santé et le bien-être">Santé & bien-être</option>
+      <option value="la technologie et les réseaux sociaux">Technologie</option>
+      <option value="l'environnement et l'écologie">Environnement</option>
+      <option value="la famille et les relations">Famille & relations</option>
+      <option value="les études et la vie étudiante">Études</option>
+      <option value="l'argent et les finances personnelles">Finances</option>
+      <option value="le shopping et les achats">Shopping</option>
+      <option value="le cinéma et les séries">Cinéma & séries</option>
+      <option value="la musique">Musique</option>
+      <option value="le sport">Sport</option>
+      <option value="la cuisine et la gastronomie">Cuisine</option>
+      <option value="les rencontres et la vie sociale">Rencontres & vie sociale</option>
+      <option value="l'art et la culture">Art & culture</option>
+      <option value="les transports et les déplacements">Transports</option>
+      <option value="le logement et la vie quotidienne à la maison">Logement</option>
+      <option value="les animaux de compagnie">Animaux</option>
+    </select>
   </div>
 
   
@@ -369,7 +394,7 @@
   const micBtn = document.getElementById('micBtn');
   const levelSelect = document.getElementById('levelSelect');
   const speedSelect = document.getElementById('speedSelect');
-  const topicsRow = document.getElementById('topicsRow');
+  const topicSelect = document.getElementById('topicSelect');
   const vocabList = document.getElementById('vocabList');
   const statMsgs = document.getElementById('statMsgs');
   const statCorrections = document.getElementById('statCorrections');
@@ -476,12 +501,8 @@
   openNotebook.addEventListener('click', ()=> sidebar.classList.add('open'));
   closeNotebook.addEventListener('click', ()=> sidebar.classList.remove('open'));
 
-  topicsRow.addEventListener('click', (e)=>{
-    const chip = e.target.closest('.chip');
-    if(!chip) return;
-    currentTopic = chip.dataset.topic;
-    [...topicsRow.children].forEach(c=>c.style.background='');
-    chip.style.background = 'var(--gold-bg)';
+  topicSelect.addEventListener('change', ()=>{
+    currentTopic = topicSelect.value;
     if(apiHistory.length===0){
       const starter = starterLine(currentTopic);
       addAiMessage({
@@ -499,7 +520,23 @@
       "le travail et l'entretien d'embauche":"Hi there! Let's practice for a job interview. Can you tell me about your current job?",
       "les loisirs et les passions":"Hey! What do you like to do in your free time?",
       "l'actualité et les sujets de société":"Hi! What's a news story that caught your attention recently?",
-      "commander au restaurant":"Welcome! Imagine we're at a restaurant. What would you like to order?"
+      "commander au restaurant":"Welcome! Imagine we're at a restaurant. What would you like to order?",
+      "la santé et le bien-être":"Hi! How have you been feeling lately — any healthy habits you're working on?",
+      "la technologie et les réseaux sociaux":"Hey! Which app or gadget have you been using the most lately?",
+      "l'environnement et l'écologie":"Hi! Do you do anything in your daily life to help the environment?",
+      "la famille et les relations":"Hello! Tell me a bit about your family — who are you closest to?",
+      "les études et la vie étudiante":"Hi! What did you study, or what are you studying right now?",
+      "l'argent et les finances personnelles":"Hey! Do you usually plan a budget, or go with the flow?",
+      "le shopping et les achats":"Hi! What was the last thing you bought that you were excited about?",
+      "le cinéma et les séries":"Hey! Have you watched any good movies or shows recently?",
+      "la musique":"Hi! What kind of music do you listen to most these days?",
+      "le sport":"Hey! Do you play or watch any sports regularly?",
+      "la cuisine et la gastronomie":"Hi! What's your favorite dish to cook or eat?",
+      "les rencontres et la vie sociale":"Hello! How did you meet your best friend?",
+      "l'art et la culture":"Hi! Is there an artist, book, or exhibition that inspired you recently?",
+      "les transports et les déplacements":"Hey! How do you usually get around — car, bike, public transport?",
+      "le logement et la vie quotidienne à la maison":"Hi! Tell me about your home — what's your favorite room?",
+      "les animaux de compagnie":"Hey! Do you have any pets, or would you like one someday?"
     };
     return starters[topic] || "Hi! What would you like to talk about today?";
   }
@@ -707,7 +744,7 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
   }
 
   /* ---------- init ---------- */
-  [...topicsRow.children][0].click();
+  topicSelect.dispatchEvent(new Event('change'));
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
