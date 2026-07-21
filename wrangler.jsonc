@@ -5,5 +5,12 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "voix-juste-db",
+      "database_id": "d696576c-63b0-41e8-b97f-d149abc0e333"
+    }
+  ]
 }

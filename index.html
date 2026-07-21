@@ -283,7 +283,45 @@
   .unsupported-note{
     font-family:var(--font-mono); font-size:11px; color:var(--gold); padding:6px 28px 0;
   }
+
+  /* ---------- Auth overlay & modals ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(27,42,74,.55); z-index:200;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.hidden{display:none;}
+  .modal-card{
+    background:var(--card); border-radius:14px; padding:28px; max-width:380px; width:100%;
+    box-shadow:0 20px 60px rgba(27,42,74,.35);
+  }
+  .modal-card h2{font-family:var(--font-display); margin:0 0 6px; font-size:22px;}
+  .modal-card p{font-size:13.5px; color:var(--ink-soft); margin:0 0 18px; line-height:1.5;}
+  .modal-card input{
+    width:100%; padding:10px 12px; border:1px solid var(--rule); border-radius:8px;
+    font-family:var(--font-body); font-size:14px; margin-bottom:10px; background:var(--paper);
+  }
+  .modal-card .primary-btn{
+    width:100%; padding:11px; border:none; border-radius:8px; background:var(--ink); color:#fff;
+    font-weight:600; font-size:14px; cursor:pointer; margin-top:4px;
+  }
+  .modal-card .primary-btn:hover{background:#12203f;}
+  .modal-card .link-btn{
+    width:100%; background:none; border:none; color:var(--ink-soft); font-size:12.5px;
+    text-decoration:underline; cursor:pointer; margin-top:12px; font-family:var(--font-mono);
+  }
+  .modal-card .error-msg{color:var(--correct-red); font-size:12.5px; margin:-4px 0 10px; min-height:1em;}
+  .account-badge{
+    display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:12px;
+    border:1px solid var(--rule); border-radius:999px; padding:6px 11px; background:var(--card); color:var(--ink-soft);
+  }
+  .account-badge.pro{background:var(--success-bg); color:var(--success); border-color:var(--success); font-weight:600;}
+  .pay-option{
+    border:1px solid var(--rule); border-radius:10px; padding:14px; margin-bottom:10px;
+  }
+  .pay-option b{display:block; font-size:14px; margin-bottom:4px;}
+  .pay-option p{margin:0; font-size:12.5px;}
 </style>
+<script src="https://cdn.kkiapay.me/k.js"></script>
 </head>
 <body>
 
@@ -294,6 +332,7 @@
       <span class="tag">// tuteur d'anglais — écrit &amp; oral</span>
     </div>
     <div class="controls">
+      <button class="account-badge" id="accountBadge">👤 Connexion</button>
       <span class="streak-badge zero" id="streakBadge"><span class="flame">🔥</span><span id="streakCount">0</span></span>
       <select id="levelSelect" aria-label="Niveau">
         <option value="adaptatif" selected>Adaptatif (mixte)</option>
@@ -379,6 +418,35 @@
 <div class="unsupported-note" id="speechNote" style="display:none;"></div>
 <div class="celebrate-toast" id="celebrateToast">🎉 <span id="celebrateText">Objectif du jour atteint !</span></div>
 
+<div class="modal-overlay hidden" id="authOverlay">
+  <div class="modal-card">
+    <h2 id="authTitle">Connexion</h2>
+    <p>Connecte-toi pour pratiquer avec ton tuteur d'anglais. <span id="authFreeNote">20 messages gratuits inclus.</span></p>
+    <div class="error-msg" id="authError"></div>
+    <input type="email" id="authEmail" placeholder="Email" autocomplete="email">
+    <input type="password" id="authPassword" placeholder="Mot de passe (6 caractères min.)" autocomplete="current-password">
+    <button class="primary-btn" id="authSubmitBtn">Se connecter</button>
+    <button class="link-btn" id="authSwitchBtn">Pas encore de compte ? Inscris-toi</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="upgradeOverlay">
+  <div class="modal-card">
+    <h2>Passer en Pro</h2>
+    <p>Tu as utilisé tes 20 messages gratuits. Passe en Pro pour continuer à pratiquer sans limite.</p>
+    <div class="pay-option">
+      <b>💳 Payer en ligne (Mobile Money / Carte)</b>
+      <p>Paiement sécurisé via KKiaPay.</p>
+      <button class="primary-btn" id="kkiapayBtn" style="margin-top:10px;">Payer 2000 FCFA</button>
+    </div>
+    <div class="pay-option">
+      <b>📱 Paiement manuel</b>
+      <p>Envoie 2000 FCFA par Mobile Money au <strong>+229 XX XX XX XX</strong> puis envoie ton reçu par WhatsApp. Ton compte sera activé en Pro sous peu.</p>
+    </div>
+    <button class="link-btn" id="closeUpgradeBtn">Plus tard</button>
+  </div>
+</div>
+
 <script>
 (function(){
   // ⚠️ À MODIFIER après avoir déployé votre backend (voir README.md) :
@@ -404,6 +472,18 @@
   const openNotebook = document.getElementById('openNotebook');
   const closeNotebook = document.getElementById('closeNotebook');
   const speechNote = document.getElementById('speechNote');
+  const accountBadge = document.getElementById('accountBadge');
+  const authOverlay = document.getElementById('authOverlay');
+  const authTitle = document.getElementById('authTitle');
+  const authFreeNote = document.getElementById('authFreeNote');
+  const authError = document.getElementById('authError');
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const authSubmitBtn = document.getElementById('authSubmitBtn');
+  const authSwitchBtn = document.getElementById('authSwitchBtn');
+  const upgradeOverlay = document.getElementById('upgradeOverlay');
+  const kkiapayBtn = document.getElementById('kkiapayBtn');
+  const closeUpgradeBtn = document.getElementById('closeUpgradeBtn');
   const streakBadge = document.getElementById('streakBadge');
   const streakCount = document.getElementById('streakCount');
   const goalSelect = document.getElementById('goalSelect');
@@ -640,6 +720,8 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
 
   async function sendMessage(text){
     if(!text || !text.trim()) return;
+    if(!currentUser){ openAuthModal(); return; }
+    if(!currentUser.isPro && currentUser.messagesUsed >= currentUser.freeLimit){ openUpgradeModal(); return; }
     addUserMessage(text);
     stats.msgs++;
     registerActivityForStreak();
@@ -652,6 +734,7 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
     try{
       const response = await fetch(API_ENDPOINT, {
         method:"POST",
+        credentials:"include",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           system: systemPrompt(),
@@ -660,6 +743,16 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
       });
       const data = await response.json();
 
+      if(response.status === 401){
+        hideTyping();
+        openAuthModal();
+        return;
+      }
+      if(response.status === 402){
+        hideTyping();
+        openUpgradeModal();
+        return;
+      }
       if(!response.ok){
         throw new Error(data && data.error ? data.error : `Erreur serveur (${response.status})`);
       }
@@ -673,6 +766,10 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
       apiHistory.push({role:'assistant', content: clean});
       hideTyping();
       addAiMessage(parsed);
+      if(currentUser && !currentUser.isPro){
+        currentUser.messagesUsed++;
+        renderAccountBadge();
+      }
     }catch(err){
       hideTyping();
       const row = document.createElement('div');
@@ -743,8 +840,133 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
     window.speechSynthesis.speak(utter);
   }
 
+  /* ---------- Authentification & compte ---------- */
+  const KKIAPAY_PUBLIC_KEY = "b7aa385b5cdfbe43d6e365bee2c4399546c2fc22";
+  const KKIAPAY_SANDBOX = true; // passe à false une fois ton compte KKiaPay activé et validé
+
+  let currentUser = null;
+  let authMode = 'login';
+
+  function apiUrl(path){ return new URL(path, API_ENDPOINT).toString(); }
+
+  function renderAccountBadge(){
+    if(!currentUser){
+      accountBadge.textContent = '👤 Connexion';
+      accountBadge.classList.remove('pro');
+    } else if(currentUser.isPro){
+      accountBadge.textContent = '⭐ Pro';
+      accountBadge.classList.add('pro');
+    } else {
+      const remaining = Math.max(0, currentUser.freeLimit - currentUser.messagesUsed);
+      accountBadge.textContent = `👤 ${remaining} msg. gratuits`;
+      accountBadge.classList.remove('pro');
+    }
+  }
+
+  function setAuthMode(mode){
+    authMode = mode;
+    authError.textContent = '';
+    if(mode === 'login'){
+      authTitle.textContent = 'Connexion';
+      authSubmitBtn.textContent = 'Se connecter';
+      authSwitchBtn.textContent = "Pas encore de compte ? Inscris-toi";
+      authFreeNote.style.display = 'none';
+    } else {
+      authTitle.textContent = 'Créer un compte';
+      authSubmitBtn.textContent = "S'inscrire";
+      authSwitchBtn.textContent = 'Déjà un compte ? Connecte-toi';
+      authFreeNote.style.display = 'inline';
+    }
+  }
+
+  function openAuthModal(){ authError.textContent = ''; authOverlay.classList.remove('hidden'); }
+  function closeAuthModal(){ authOverlay.classList.add('hidden'); }
+  function openUpgradeModal(){ upgradeOverlay.classList.remove('hidden'); }
+  function closeUpgradeModal(){ upgradeOverlay.classList.add('hidden'); }
+
+  authSwitchBtn.addEventListener('click', ()=> setAuthMode(authMode === 'login' ? 'signup' : 'login'));
+
+  authSubmitBtn.addEventListener('click', async ()=>{
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    if(!email || !password){ authError.textContent = 'Remplis les deux champs.'; return; }
+    authSubmitBtn.disabled = true;
+    authError.textContent = '';
+    try{
+      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+      const res = await fetch(apiUrl(endpoint), {
+        method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+      if(!res.ok){ authError.textContent = data.error || 'Une erreur est survenue.'; return; }
+      currentUser = data;
+      renderAccountBadge();
+      closeAuthModal();
+    }catch(e){
+      authError.textContent = 'Erreur réseau, réessaie.';
+    }finally{
+      authSubmitBtn.disabled = false;
+    }
+  });
+
+  accountBadge.addEventListener('click', ()=>{
+    if(!currentUser){ setAuthMode('login'); openAuthModal(); }
+    else if(confirm('Te déconnecter ?')){
+      fetch(apiUrl('/api/auth/logout'), {method:'POST', credentials:'include'})
+        .finally(()=>{ currentUser = null; renderAccountBadge(); });
+    }
+  });
+
+  closeUpgradeBtn.addEventListener('click', closeUpgradeModal);
+
+  kkiapayBtn.addEventListener('click', ()=>{
+    if(typeof openKkiapayWidget !== 'function'){ alert("Le module de paiement ne s'est pas chargé, réessaie."); return; }
+    openKkiapayWidget({
+      amount: 2000,
+      key: KKIAPAY_PUBLIC_KEY,
+      sandbox: KKIAPAY_SANDBOX,
+      position: 'center',
+      data: currentUser ? currentUser.email : ''
+    });
+  });
+
+  if(typeof addSuccessListener === 'function'){
+    addSuccessListener(async (resp)=>{
+      try{
+        const verifyRes = await fetch(apiUrl('/api/payment/verify'), {
+          method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({transactionId: resp.transactionId})
+        });
+        const verifyData = await verifyRes.json();
+        if(verifyData.ok && verifyData.isPro){
+          currentUser.isPro = true;
+          renderAccountBadge();
+          closeUpgradeModal();
+          alert('Paiement confirmé, tu es maintenant en Pro 🎉');
+        } else {
+          alert("Paiement reçu, vérification en cours. Si ton statut Pro n'apparaît pas d'ici quelques minutes, contacte le support.");
+        }
+      }catch(e){
+        alert('Le paiement a été reçu mais la vérification a échoué. Contacte le support avec ton reçu.');
+      }
+    });
+  }
+
+  async function checkAuth(){
+    try{
+      const res = await fetch(apiUrl('/api/me'), {credentials:'include'});
+      currentUser = res.ok ? await res.json() : null;
+    }catch(e){
+      currentUser = null;
+    }
+    renderAccountBadge();
+    if(!currentUser){ setAuthMode('login'); openAuthModal(); }
+  }
+
   /* ---------- init ---------- */
   topicSelect.dispatchEvent(new Event('change'));
+  checkAuth();
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
