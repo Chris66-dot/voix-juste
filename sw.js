@@ -1,4 +1,4 @@
-const CACHE_NAME = "voix-juste-v6";
+const CACHE_NAME = "voix-juste-v10";
 const SHELL_FILES = [
   "./index.html",
   "./manifest.json",
