@@ -842,15 +842,21 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
   if(SpeechRecognition){
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
-    recognition.interimResults = true;
-    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.continuous = false;
     recognition.maxAlternatives = 1;
     let finalTranscript = '';
+    let userStopped = true;
 
     micBtn.addEventListener('click', ()=>{
-      if(recognizing){ recognition.stop(); return; }
+      if(recognizing){
+        userStopped = true;
+        recognition.stop();
+        return;
+      }
       finalTranscript = '';
       textInput.value = '';
+      userStopped = false;
       recognition.start();
     });
     recognition.onstart = ()=>{
@@ -858,22 +864,28 @@ Limite newVocabulary à 0-2 éléments, uniquement des mots réellement nouveaux
       micBtn.classList.add('listening');
       textInput.placeholder = "🎙️ Écoute… reclique sur le micro pour arrêter et envoyer";
     };
+    recognition.onresult = (event)=>{
+      const segment = event.results[0][0].transcript.trim();
+      if(segment){
+        finalTranscript = (finalTranscript + ' ' + segment).trim();
+        textInput.value = finalTranscript;
+      }
+    };
+    recognition.onerror = (e)=>{
+      // "no-speech" juste dû à un silence entre deux phrases : on ignore et on continue d'écouter
+      if(e.error !== 'no-speech'){ userStopped = true; }
+    };
     recognition.onend = ()=>{
+      if(!userStopped){
+        // Segment terminé mais l'utilisateur n'a pas arrêté volontairement : on relance
+        // immédiatement pour permettre un discours plus long, sans mode "continuous" instable.
+        try{ recognition.start(); return; }catch(e){ /* déjà en cours, on ignore */ }
+      }
       recognizing = false;
       micBtn.classList.remove('listening');
       textInput.placeholder = "Écris ou dis quelque chose en anglais…";
       const text = textInput.value.trim();
       if(text){ sendMessage(text); }
-    };
-    recognition.onerror = ()=>{ recognizing = false; micBtn.classList.remove('listening'); };
-    recognition.onresult = (event)=>{
-      let interim = '';
-      for(let i = event.resultIndex; i < event.results.length; i++){
-        const res = event.results[i];
-        if(res.isFinal){ finalTranscript += res[0].transcript + ' '; }
-        else { interim += res[0].transcript; }
-      }
-      textInput.value = (finalTranscript + interim).trim();
     };
   } else {
     micBtn.disabled = true;
